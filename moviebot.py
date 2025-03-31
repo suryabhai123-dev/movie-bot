@@ -11,10 +11,10 @@ from aiogram.client.bot import DefaultBotProperties
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Bot token (replace with your token)
+# Bot token
 BOT_TOKEN = "7569096698:AAGcdJjY70uu7N5481RH-OH30fLIlVwvHX8"
 
-# Initialize bot and dispatcher using DefaultBotProperties for parse_mode
+# Initialize bot and dispatcher using DefaultBotProperties for parse_mode="HTML"
 bot = Bot(token=BOT_TOKEN, default_bot_properties=DefaultBotProperties(parse_mode="HTML"))
 dp = Dispatcher()
 
@@ -122,13 +122,15 @@ async def start_handler(message: types.Message):
 # Message handler that looks for movie keywords
 async def movie_handler(message: types.Message):
     text = message.text.lower()
+    # Iterate over each channel and its keyword list
     for channel_id, movies in MOVIE_CHANNEL_MAP.items():
         for movie in movies:
             if movie in text:
+                logger.info(f"Keyword '{movie}' found in message: {text}")
                 try:
                     # Calculate expiry timestamp (10 minutes from now)
                     expire_date = int(time.time()) + 600
-                    # Create a temporary invite link (join request)
+                    # Create a temporary invite link (join request) for the specific channel
                     invite = await bot.create_chat_invite_link(
                         chat_id=int(channel_id),
                         expire_date=expire_date,
@@ -144,10 +146,13 @@ async def movie_handler(message: types.Message):
                         "Tap below to join (expires in 10 minutes)."
                     )
                     await message.reply(response_text, reply_markup=keyboard)
+                    logger.info(f"Sent invite link for channel {channel_id} using keyword '{movie}'.")
                 except TelegramBadRequest as e:
                     logger.error(f"Error creating invite link for channel {channel_id}: {e}")
                     await message.reply("😕 Something went wrong, try again later!")
-                return  # Exit after handling the first matching movie
+                return  # Exit once the first matching movie has been handled
+    # Optional: Log if no keyword was found
+    logger.info("No matching movie keyword found in the message.")
 
 async def main():
     dp.message.register(start_handler, Command("start"))
